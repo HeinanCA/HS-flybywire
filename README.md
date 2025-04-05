@@ -1,236 +1,277 @@
-![FlyByWire Simulations](./branding/Horizon_Simulations.png)
-# Horizon Simulations - FlyByWire - Airbus A32(X)
+![Horizon Simulations](./branding/Horizon_Simulations.png)
 
-The Horizon Simulations is an Airbus aircraft project based on [FlyByWire Simulations](https://flybywiresim.com/) A32NX.
+# Horizon Simulations - Airbus A32(X)
 
-The following aircraft configuration is currently simulated or targeted:
+The Horizon Simulations project is an Airbus aircraft development effort based on [FlyByWire Simulations](https://flybywiresim.com/) A32NX.
+
+## Aircraft Models
+
+The following aircraft configurations are currently simulated or targeted:
 
 ### A321neo (LR) CFM LEAP
 
- ```
- Model       A321-251N
- Engine      CFM LEAP 1A-32
- APU         APS3200
- FMS         Honeywell Release H3
- FWC Std.    H2F9C
- RA          Honeywell ALA-52B
- TAWS        Honeywell EGPWS
- ACAS        Honeywell TPA-100B
- ATC         Honeywell TRA-100B
- MMR         Honeywell iMMR
- WXR         Honeywell RDR-4000
- ```
+```
+Model       A321-251N
+Engine      CFM LEAP 1A-32
+APU         APS3200
+FMS         Honeywell Release H3
+FWC Std.    H2F9C
+RA          Honeywell ALA-52B
+TAWS        Honeywell EGPWS
+ACAS        Honeywell TPA-100B
+ATC         Honeywell TRA-100B
+MMR         Honeywell iMMR
+WXR         Honeywell RDR-4000
+```
 
- ### A321neo (LR) Pratt & Whitney
+### A321neo (LR) Pratt & Whitney
 
- ```
- Model       A321-271N
- Engine      Pratt & Whitney PW1130G-JM
- APU         APS3200
- FMS         Honeywell Release H3
- FWC Std.    H2F9C
- RA          Honeywell ALA-52B
- TAWS        Honeywell EGPWS
- ACAS        Honeywell TPA-100B
- ATC         Honeywell TRA-100B
- MMR         Honeywell iMMR
- WXR         Honeywell RDR-4000
- ```
+```
+Model       A321-271N
+Engine      Pratt & Whitney PW1130G-JM
+APU         APS3200
+FMS         Honeywell Release H3
+FWC Std.    H2F9C
+RA          Honeywell ALA-52B
+TAWS        Honeywell EGPWS
+ACAS        Honeywell TPA-100B
+ATC         Honeywell TRA-100B
+MMR         Honeywell iMMR
+WXR         Honeywell RDR-4000
+```
 
- ### A318-100 CFM (ceo)
+### A318-100 CFM (ceo)
 
- ```
- Model       A318-115
- Engine      CFM56-5B7
- APU         APS3200
- FMS         Honeywell Release H3
- FWC Std.    H2F9C
- RA          Honeywell ALA-52B
- TAWS        Honeywell EGPWS
- ACAS        Honeywell TPA-100B
- ATC         Honeywell TRA-100B
- MMR         Honeywell iMMR
- WXR         Honeywell RDR-4000
- ```
+```
+Model       A318-115
+Engine      CFM56-5B7
+APU         APS3200
+FMS         Honeywell Release H3
+FWC Std.    H2F9C
+RA          Honeywell ALA-52B
+TAWS        Honeywell EGPWS
+ACAS        Honeywell TPA-100B
+ATC         Honeywell TRA-100B
+MMR         Honeywell iMMR
+WXR         Honeywell RDR-4000
+```
 
- ### A319-100 CFM (ceo)
+### A319-100 CFM (ceo)
 
- ```
- Model       A319-115
- Engine      CFM56-5B5
- APU         APS3200
- FMS         Honeywell Release H3
- FWC Std.    H2F9C
- RA          Honeywell ALA-52B
- TAWS        Honeywell EGPWS
- ACAS        Honeywell TPA-100B
- ATC         Honeywell TRA-100B
- MMR         Honeywell iMMR
- WXR         Honeywell RDR-4000
- ```
+```
+Model       A319-115
+Engine      CFM56-5B5
+APU         APS3200
+FMS         Honeywell Release H3
+FWC Std.    H2F9C
+RA          Honeywell ALA-52B
+TAWS        Honeywell EGPWS
+ACAS        Honeywell TPA-100B
+ATC         Honeywell TRA-100B
+MMR         Honeywell iMMR
+WXR         Honeywell RDR-4000
+```
 
-  ### A319-100 IAE (ceo)
+### A319-100 IAE (ceo)
 
- ```
- Model       A319-133
- Engine      IAE V2524-A5
- APU         APS3200
- FMS         Honeywell Release H3
- FWC Std.    H2F9C
- RA          Honeywell ALA-52B
- TAWS        Honeywell EGPWS
- ACAS        Honeywell TPA-100B
- ATC         Honeywell TRA-100B
- MMR         Honeywell iMMR
- WXR         Honeywell RDR-4000
- ```
+```
+Model       A319-133
+Engine      IAE V2524-A5
+APU         APS3200
+FMS         Honeywell Release H3
+FWC Std.    H2F9C
+RA          Honeywell ALA-52B
+TAWS        Honeywell EGPWS
+ACAS        Honeywell TPA-100B
+ATC         Honeywell TRA-100B
+MMR         Honeywell iMMR
+WXR         Honeywell RDR-4000
+```
 
- ### A320-200 CFM (ceo)
+### A320-200 CFM (ceo)
 
- ```
- Model       A320-214
- Engine      CFM56-5B4/P
- APU         APS3200
- FMS         Honeywell Release H3
- FWC Std.    H2F9C
- RA          Honeywell ALA-52B
- TAWS        Honeywell EGPWS
- ACAS        Honeywell TPA-100B
- ATC         Honeywell TRA-100B
- MMR         Honeywell iMMR
- WXR         Honeywell RDR-4000
- ```
+```
+Model       A320-214
+Engine      CFM56-5B4/P
+APU         APS3200
+FMS         Honeywell Release H3
+FWC Std.    H2F9C
+RA          Honeywell ALA-52B
+TAWS        Honeywell EGPWS
+ACAS        Honeywell TPA-100B
+ATC         Honeywell TRA-100B
+MMR         Honeywell iMMR
+WXR         Honeywell RDR-4000
+```
 
-  ### A320-200 IAE (ceo)
+### A320-200 IAE (ceo)
 
- ```
- Model       A320-232
- Engine      IAE V2527-A5
- APU         APS3200
- FMS         Honeywell Release H3
- FWC Std.    H2F9C
- RA          Honeywell ALA-52B
- TAWS        Honeywell EGPWS
- ACAS        Honeywell TPA-100B
- ATC         Honeywell TRA-100B
- MMR         Honeywell iMMR
- WXR         Honeywell RDR-4000
- ```
+```
+Model       A320-232
+Engine      IAE V2527-A5
+APU         APS3200
+FMS         Honeywell Release H3
+FWC Std.    H2F9C
+RA          Honeywell ALA-52B
+TAWS        Honeywell EGPWS
+ACAS        Honeywell TPA-100B
+ATC         Honeywell TRA-100B
+MMR         Honeywell iMMR
+WXR         Honeywell RDR-4000
+```
 
-## How to build
-Make sure docker is installed. Preferably with WSL2 backend.
+## Build Instructions
 
-### Software requirements
-- Docker Desktop or native on WSL2
+### Prerequisites
+- Docker Desktop (preferably with WSL2 backend)
 - NodeJS (latest LTS version)
 - Git for Windows
 
-### 1. First, run the following command in PowerShell. This will install the A32NX Docker images and Node modules.
+### Build Process
 
-For powershell:
+#### 1. Initial Setup
+
+Install dependencies and initialize the FlyByWire submodule:
+
+**PowerShell:**
 ```shell
 npm install --save-dev
 git submodule init
 git submodule update flybywire
 .\scripts\dev-env\run.cmd ./scripts/setup.sh
 ```
-For Git Bash/Linux:
+
+**Git Bash/Linux:**
 ```shell
 npm install --save-dev
 git submodule init
 git submodule update flybywire
 ./scripts/dev-env/run.sh ./scripts/setup.sh
 ```
-### 2. As next step, we will copy the original source files and copy-over our source files.
-#### A318ceo
-For powershell:
+
+#### 2. Copy Source Files
+
+Choose the aircraft model you want to build:
+
+**A318ceo**
+
+PowerShell:
 ```shell
 .\scripts\dev-env\run.cmd ./scripts/copy_a318hs.sh
 ```
-For Git Bash/Linux:
+
+Git Bash/Linux:
 ```shell
 ./scripts/dev-env/run.sh ./scripts/copy_a318hs.sh
 ```
-#### A319ceo
-For powershell:
+
+**A319ceo**
+
+PowerShell:
 ```shell
 .\scripts\dev-env\run.cmd ./scripts/copy_a319hs.sh
 ```
-For Git Bash/Linux:
+
+Git Bash/Linux:
 ```shell
 ./scripts/dev-env/run.sh ./scripts/copy_a319hs.sh
 ```
-#### A320ceo
-For powershell:
+
+**A320ceo**
+
+PowerShell:
 ```shell
 .\scripts\dev-env\run.cmd ./scripts/copy_a320hs.sh
 ```
-For Git Bash/Linux:
+
+Git Bash/Linux:
 ```shell
 ./scripts/dev-env/run.sh ./scripts/copy_a320hs.sh
 ```
-#### A321neo
-For powershell:
+
+**A321neo**
+
+PowerShell:
 ```shell
 .\scripts\dev-env\run.cmd ./scripts/copy_a321hs.sh
 ```
-For Git Bash/Linux:
+
+Git Bash/Linux:
 ```shell
 ./scripts/dev-env/run.sh ./scripts/copy_a321hs.sh
 ```
-### 3. Build the entire A32NX module by running following command in PowerShell.
-#### A318ceo
-For powershell:
+
+#### 3. Build the Aircraft Module
+
+Build your selected aircraft:
+
+**A318ceo**
+
+PowerShell:
 ```shell
 .\scripts\dev-env\run.cmd ./scripts/build_a318hs.sh
 ```
-For Git Bash/Linux:
+
+Git Bash/Linux:
 ```shell
 ./scripts/dev-env/run.sh ./scripts/build_a318hs.sh
 ```
-#### A319ceo
-For powershell:
+
+**A319ceo**
+
+PowerShell:
 ```shell
 .\scripts\dev-env\run.cmd ./scripts/build_a319hs.sh
 ```
-For Git Bash/Linux:
+
+Git Bash/Linux:
 ```shell
 ./scripts/dev-env/run.sh ./scripts/build_a319hs.sh
 ```
-#### A320ceo
-For powershell:
+
+**A320ceo**
+
+PowerShell:
 ```shell
 .\scripts\dev-env\run.cmd ./scripts/build_a320hs.sh
 ```
-For Git Bash/Linux:
+
+Git Bash/Linux:
 ```shell
 ./scripts/dev-env/run.sh ./scripts/build_a320hs.sh
 ```
-#### A321neo
-For powershell:
+
+**A321neo**
+
+PowerShell:
 ```shell
 .\scripts\dev-env\run.cmd ./scripts/build_a321hs.sh
 ```
-For Git Bash/Linux:
+
+Git Bash/Linux:
 ```shell
 ./scripts/dev-env/run.sh ./scripts/build_a321hs.sh
 ```
 
-### 4. The package is now ready to use. Copy the folder "build_a32x/out/lvfr-horizonsim-airbus-axx" to your Community Folder in MSFS.
+#### 4. Installation
 
-### (Optional) If you want to use the MSFS Dev Tools, you can run the following command (after the build is completed) to copy the files to the PackageSources.
+The package is now ready to use. Copy the folder `build_a32x/out/lvfr-horizonsim-airbus-axx` to your Community Folder in MSFS.
 
-For powershell:
+#### (Optional) MSFS Dev Tools Package
+
+If you want to use the MSFS Dev Tools, run the following command after building:
+
+PowerShell:
 ```shell
 .\scripts\dev-env\run.cmd ./scripts/package.sh
 ```
-For Git Bash/Linux:
+
+Git Bash/Linux:
 ```shell
 ./scripts/dev-env/run.sh ./scripts/package.sh
 ```
 
-
- ## License
+## License
 
 Original source code assets present in this repository are licensed under the GNU GPLv3.
 
