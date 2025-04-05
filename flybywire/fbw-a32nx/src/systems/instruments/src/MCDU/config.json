@@ -1,6 +1,0 @@
-{
-  "isInteractive": true,
-  "extraDeps": [
-    "/fbw-common/src/systems/navdata"
-  ]
-}
