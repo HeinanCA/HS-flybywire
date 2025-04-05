@@ -1,0 +1,24 @@
+{
+  "compilerOptions": {
+    "target": "es2017" /* Specifies the ES2017 target, compatible with Coherent GT */,
+    "baseUrl": ".",
+    "resolveJsonModule" : true,
+    "typeRoots": [
+      "../typings",
+      "../../../node_modules/@types",
+    ],
+    "moduleResolution": "node",
+    "allowSyntheticDefaultImports": true,
+    "jsx": "react",
+    "skipLibCheck": true,
+    "paths": {
+      "@fmgc/*": ["../../../fbw-a32nx/src/systems/fmgc/src/*"],
+      "@shared/*": ["../../../fbw-a32nx/src/systems/shared/src/*"],
+      "@simbridge/*": ["../../../fbw-a32nx/src/systems/simbridge-client/src/*"],
+      "@typings/*": ["../typings/*"],
+      "@flybywiresim/fbw-sdk": ["./index.ts"],
+      "@flybywiresim/flypad": ["./instruments/src/EFB/index.ts"],
+      "@flybywiresim/checklists": ["./shared/src/checklists/index.ts"]
+    }
+  }
+}
