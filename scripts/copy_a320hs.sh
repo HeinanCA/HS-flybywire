@@ -1,185 +1,318 @@
 #!/bin/bash
 
-# Exit on error, but handle them more carefully
+# Enhanced A320 Build Script
+# This script organizes and builds the A320 project components
+
+# Color definitions
+CYAN='\033[0;36m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+RED='\033[0;31m'
+BLUE='\033[0;34m'
+BOLD='\033[1m'
+RESET='\033[0m'
+
+# Log functions
+log_info() {
+    echo -e "${BLUE}[INFO]${RESET} $1"
+}
+
+log_success() {
+    echo -e "${GREEN}[SUCCESS]${RESET} $1"
+}
+
+log_warning() {
+    echo -e "${YELLOW}[WARNING]${RESET} $1"
+}
+
+log_error() {
+    echo -e "${RED}[ERROR]${RESET} $1"
+}
+
+log_section() {
+    echo -e "\n${CYAN}${BOLD}===== $1 =====${RESET}\n"
+}
+
+# Error handling function
+handle_error() {
+    local exit_code=$?
+    local line_number=$1
+    log_error "Failed at line ${line_number} with exit code ${exit_code}"
+
+    case $line_number in
+        # Add specific error handling for critical sections as needed
+        *)
+            log_error "Error occurred during execution. Check your directory structure and permissions."
+            ;;
+    esac
+
+    exit $exit_code
+}
+
+# Clean up on error function
+cleanup_on_error() {
+    log_warning "Cleaning up partially built directories..."
+
+    # Only clean up directories that might be corrupted or incomplete
+    if [ -d "./fbw-common" ]; then
+        rm -rf ./fbw-common
+        log_info "Removed fbw-common directory"
+    fi
+
+    if [ -d "./build-a320ceo" ]; then
+        rm -rf ./build-a320ceo
+        log_info "Removed build-a320ceo directory"
+    fi
+
+    log_info "Cleanup complete"
+    exit 1
+}
+
+# Trap errors and call error handler with line number
+trap 'handle_error $LINENO' ERR
+# Trap interrupts (Ctrl+C) and cleanup
+trap 'log_error "Script interrupted by user"; cleanup_on_error' INT TERM
+
+# Enable error tracing
 set -e
 
-# Function to show operation status
-show_status() {
-  echo "----------------------------------------------"
-  echo "🔄 $1"
-  echo "----------------------------------------------"
+# Print script header
+echo -e "${BOLD}${CYAN}"
+echo "╔═══════════════════════════════════════════════════╗"
+echo "║               A320 Build Script                   ║"
+echo "╚═══════════════════════════════════════════════════╝${RESET}"
+
+# Check for essential directories before starting
+check_prereqs() {
+    local missing=0
+
+    log_section "Checking prerequisites"
+
+    if [ ! -d "./flybywire" ]; then
+        log_error "flybywire directory not found!"
+        missing=1
+    else
+        log_info "flybywire directory found ✓"
+    fi
+
+    if [ ! -d "./hsim-a320-common" ]; then
+        log_error "hsim-a320-common directory not found!"
+        missing=1
+    else
+        log_info "hsim-a320-common directory found ✓"
+    fi
+
+    if [ ! -d "./hsim-common" ]; then
+        log_error "hsim-common directory not found!"
+        missing=1
+    else
+        log_info "hsim-common directory found ✓"
+    fi
+
+    if [ ! -d "./hsim-a320ceo" ]; then
+        log_error "hsim-a320ceo directory not found!"
+        missing=1
+    else
+        log_info "hsim-a320ceo directory found ✓"
+    fi
+
+    if [ $missing -eq 1 ]; then
+        log_error "One or more required directories are missing. Aborting..."
+        exit 1
+    fi
+
+    log_success "All prerequisite directories found"
 }
 
-# Function to validate directory exists
-validate_dir() {
-  local dir=$1
-  if [ ! -d "$dir" ]; then
-    echo "❌ ERROR: Directory $dir does not exist!"
-    return 1
-  else
-    echo "✅ Directory $dir exists."
-    return 0
-  fi
-}
+# Run prerequisite check
+check_prereqs
 
-# Function to create directory if it doesn't exist
-ensure_dir() {
-  local dir=$1
-  if [ ! -d "$dir" ]; then
-    echo "📁 Creating directory: $dir"
-    mkdir -p "$dir"
-  else
-    echo "✅ Directory already exists: $dir"
-  fi
-}
+# Set up common directory
+log_section "Setting up common directory"
 
-# Function to clean directory if it exists
-clean_dir() {
-  local dir=$1
-  if [ -d "$dir" ]; then
-    show_status "Removing directory: $dir"
-    rm -rf "$dir"
-  fi
-}
-
-# Function to copy files with validation
-copy_files() {
-  local src=$1
-  local dest=$2
-
-  if [ ! -e "$src" ]; then
-    echo "❌ ERROR: Source $src does not exist!"
-    return 1
-  fi
-
-  ensure_dir "$(dirname "$dest")"
-  echo "📋 Copying: $src -> $dest"
-  cp -rav "$src" "$dest"
-
-  # Verify copy was successful
-  if [ $? -eq 0 ]; then
-    echo "✅ Copy successful!"
-    return 0
-  else
-    echo "❌ ERROR: Copy failed!"
-    return 1
-  fi
-}
-
-# Main execution starts here
-show_status "Starting A320 Build Process"
-
-# Step 1: Clean and setup fbw-common directory
-show_status "Setting up FBW Common directory"
-clean_dir "./fbw-common"
-
-# Validate source directories
-validate_dir "./flybywire/fbw-common" || { echo "⚠️ Missing ./flybywire/fbw-common, build may fail!"; }
-validate_dir "./hsim-a320-common" || { echo "⚠️ Missing ./hsim-a320-common, build may fail!"; }
-validate_dir "./hsim-common" || { echo "⚠️ Missing ./hsim-common, build may fail!"; }
-
-# Copy FBW COMMON source and HDW COMMON into one src
-show_status "Copying common files"
-copy_files "./flybywire/fbw-common/." "./fbw-common"
-copy_files "./hsim-a320-common/." "./fbw-common"
-copy_files "./hsim-common/." "./fbw-common"
-
-# Step 2: Clean and setup build directory
-show_status "Setting up build directory"
-clean_dir "./build-a320ceo"
-
-# Create main directories
-show_status "Creating build directory structure"
-ensure_dir "./build-a320ceo/src"
-ensure_dir "./build-a320ceo/out"
-
-# Step 3: Copy from FBW A32NX source and A320HS into src
-show_status "Copying A32NX source files"
-
-# Validate FBW source directory
-validate_dir "./flybywire/fbw-a32nx" || { echo "❌ ERROR: FBW source missing!"; exit 1; }
-
-# Copy core components
-copy_files "./flybywire/fbw-a32nx/src/behavior/." "./build-a320ceo/src/behavior"
-copy_files "./flybywire/fbw-a32nx/src/fonts/." "./build-a320ceo/src/fonts"
-copy_files "./flybywire/fbw-a32nx/src/localization/." "./build-a320ceo/src/localization"
-copy_files "./flybywire/fbw-a32nx/src/systems/." "./build-a320ceo/src/systems"
-copy_files "./flybywire/fbw-a32nx/src/wasm/." "./build-a320ceo/src/wasm"
-
-# Copy specialized components
-show_status "Copying specialized components (EWD, FMGC)"
-copy_files "./flybywire/fbw-a32nx/src/systems/instruments/src/EWD/." "./build-a320ceo/src/systems/instruments/src/EWDcfm"
-copy_files "./flybywire/fbw-a32nx/src/systems/instruments/src/EWD/." "./build-a320ceo/src/systems/instruments/src/EWDiae"
-
-copy_files "./flybywire/fbw-a32nx/src/systems/fmgc/." "./build-a320ceo/src/systems/fmgcCFMSL"
-copy_files "./flybywire/fbw-a32nx/src/systems/fmgc/." "./build-a320ceo/src/systems/fmgcIAE"
-copy_files "./flybywire/fbw-a32nx/src/systems/fmgc/." "./build-a320ceo/src/systems/fmgcIAESL"
-
-# Copy A320HS specific files
-show_status "Copying HSim A320CEO files"
-validate_dir "./hsim-a320ceo" || { echo "❌ ERROR: HSim source missing!"; exit 1; }
-
-copy_files "./hsim-a320ceo/.env" "./build-a320ceo/.env"
-copy_files "./hsim-a320ceo/mach.config.js" "./build-a320ceo/mach.config.js"
-
-copy_files "./hsim-a320ceo/src/behavior/." "./build-a320ceo/src/behavior"
-copy_files "./hsim-a320ceo/src/localization/." "./build-a320ceo/src/localization"
-copy_files "./hsim-a320ceo/src/model/." "./build-a320ceo/src/model"
-copy_files "./hsim-a320ceo/src/systems/." "./build-a320ceo/src/systems"
-copy_files "./hsim-a320ceo/src/wasm/." "./build-a320ceo/src/wasm"
-
-# Step 4: Create output directory structure
-show_status "Creating output directory structure"
-ensure_dir "./build-a320ceo/out/lvfr-horizonsim-airbus-a320-ceo"
-ensure_dir "./build-a320ceo/out/lvfr-horizonsim-airbus-a320-ceo-lock-highlight"
-
-ensure_dir "./build-a320ceo/out/lvfr-horizonsim-airbus-a320-ceo/html_ui/CSS"
-ensure_dir "./build-a320ceo/out/lvfr-horizonsim-airbus-a320-ceo/html_ui/Fonts"
-ensure_dir "./build-a320ceo/out/lvfr-horizonsim-airbus-a320-ceo/html_ui/Images"
-ensure_dir "./build-a320ceo/out/lvfr-horizonsim-airbus-a320-ceo/html_ui/JS"
-ensure_dir "./build-a320ceo/out/lvfr-horizonsim-airbus-a320-ceo/html_ui/Pages/VCockpit/Instruments/Airliners"
-ensure_dir "./build-a320ceo/out/lvfr-horizonsim-airbus-a320-ceo/html_ui/Pages/VCockpit/Instruments/FlightElements"
-ensure_dir "./build-a320ceo/out/lvfr-horizonsim-airbus-a320-ceo/html_ui/Pages/VCockpit/Instruments/NavSystems"
-ensure_dir "./build-a320ceo/out/lvfr-horizonsim-airbus-a320-ceo/html_ui/Pages/VLivery/Liveries/A320HS_Printer"
-ensure_dir "./build-a320ceo/out/lvfr-horizonsim-airbus-a320-ceo/html_ui/Pages/VLivery/Liveries/A320HS_Registration"
-
-# Step 5: Copy assets to output directories
-show_status "Copying assets to output directories"
-# Note: Commented out css copy is preserved as in original
-#copy_files "./flybywire/fbw-a32nx/src/base/flybywire-aircraft-a320-neo/html_ui/CSS/." "./build-a320ceo/out/lvfr-horizonsim-airbus-a320-ceo/html_ui/CSS/A320HS"
-copy_files "./flybywire/fbw-a32nx/src/base/flybywire-aircraft-a320-neo/html_ui/Fonts/fbw-a32nx/." "./build-a320ceo/out/lvfr-horizonsim-airbus-a320-ceo/html_ui/Fonts/A320HS"
-copy_files "./flybywire/fbw-a32nx/src/base/flybywire-aircraft-a320-neo/html_ui/Images/fbw-a32nx/." "./build-a320ceo/out/lvfr-horizonsim-airbus-a320-ceo/html_ui/Images/A320HS"
-copy_files "./flybywire/fbw-a32nx/src/base/flybywire-aircraft-a320-neo/html_ui/JS/fbw-a32nx/." "./build-a320ceo/out/lvfr-horizonsim-airbus-a320-ceo/html_ui/JS/A320HS"
-copy_files "./flybywire/fbw-a32nx/src/base/flybywire-aircraft-a320-neo/html_ui/Pages/A32NX_Core/." "./build-a320ceo/out/lvfr-horizonsim-airbus-a320-ceo/html_ui/Pages/A320HS_Core"
-copy_files "./flybywire/fbw-a32nx/src/base/flybywire-aircraft-a320-neo/html_ui/Pages/A32NX_Utils/." "./build-a320ceo/out/lvfr-horizonsim-airbus-a320-ceo/html_ui/Pages/A320HS_Utils"
-copy_files "./flybywire/fbw-a32nx/src/base/flybywire-aircraft-a320-neo/html_ui/Pages/VCockpit/Instruments/FlightElements/." "./build-a320ceo/out/lvfr-horizonsim-airbus-a320-ceo/html_ui/Pages/VCockpit/Instruments/FlightElements/A320HS"
-copy_files "./flybywire/fbw-a32nx/src/base/flybywire-aircraft-a320-neo/html_ui/Pages/VCockpit/Instruments/NavSystems/A320_Neo/." "./build-a320ceo/out/lvfr-horizonsim-airbus-a320-ceo/html_ui/Pages/VCockpit/Instruments/NavSystems/A320_Ceo"
-copy_files "./flybywire/fbw-a32nx/src/base/flybywire-aircraft-a320-neo/html_ui/Pages/VLivery/Liveries/A32NX_Registration/." "./build-a320ceo/out/lvfr-horizonsim-airbus-a320-ceo/html_ui/Pages/VLivery/Liveries/A320HS_Registration"
-copy_files "./flybywire/fbw-a32nx/src/base/flybywire-aircraft-a320-neo/html_ui/Pages/VLivery/Liveries/A32NX_Printer/." "./build-a320ceo/out/lvfr-horizonsim-airbus-a320-ceo/html_ui/Pages/VLivery/Liveries/A320HS_Printer"
-
-# Copy base of A320HS to out
-show_status "Copying A320HS base files"
-copy_files "./hsim-a320ceo/src/base/lvfr-horizonsim-airbus-a320-ceo/." "./build-a320ceo/out/lvfr-horizonsim-airbus-a320-ceo"
-copy_files "./hsim-a320ceo/src/base/lvfr-horizonsim-airbus-a320-ceo-lock-highlight/." "./build-a320ceo/out/lvfr-horizonsim-airbus-a320-ceo-lock-highlight"
-
-# Step 6: Final cleanup and permissions
-show_status "Performing final cleanup and setting permissions"
-rm -rf "./build-a320ceo/src/systems/instruments/src/EWD"
-
-show_status "Setting executable permissions"
-if [ -f "./build-a320ceo/src/wasm/fbw_a320/build.sh" ]; then
-  chmod +x ./build-a320ceo/src/wasm/fbw_a320/build.sh
-  echo "✅ Set executable permission for fbw_a320/build.sh"
-else
-  echo "⚠️ Warning: fbw_a320/build.sh not found"
+if [ -d "./fbw-common" ]; then
+    log_warning "Removing existing fbw-common directory"
+    rm -rf ./fbw-common
 fi
 
-if [ -f "./build-a320ceo/src/wasm/fadec_a320/build.sh" ]; then
-  chmod +x ./build-a320ceo/src/wasm/fadec_a320/build.sh
-  echo "✅ Set executable permission for fadec_a320/build.sh"
-else
-  echo "⚠️ Warning: fadec_a320/build.sh not found"
+log_info "Copying common files from multiple sources..."
+# Function to copy with error checking
+safe_copy() {
+    local src="$1"
+    local dest="$2"
+    local description="$3"
+
+    if [ ! -d "$src" ] && [ ! -f "$src" ]; then
+        log_error "Source $src does not exist!"
+        return 1
+    fi
+
+    cp -ra "$src" "$dest"
+    if [ $? -ne 0 ]; then
+        log_error "Failed to copy $description from $src to $dest"
+        return 1
+    else
+        log_info "Copied $description successfully"
+        return 0
+    fi
+}
+
+safe_copy "./flybywire/fbw-common/." "./fbw-common" "FlyByWire common files"
+safe_copy "./hsim-a320-common/." "./fbw-common" "HorizSim A320 common files"
+safe_copy "./hsim-common/." "./fbw-common" "HorizSim common files"
+log_success "Common directory setup complete"
+
+# Set up build directory
+log_section "Setting up build directory"
+
+if [ -d "./build-a320ceo" ]; then
+    log_warning "Removing existing build-a320ceo directory"
+    rm -rf ./build-a320ceo
 fi
 
-show_status "A320 Build Process Completed Successfully"
-echo "Build output located at: ./build-a320ceo/out/"
+log_info "Creating build directory structure..."
+mkdir -p ./build-a320ceo/src
+mkdir -p ./build-a320ceo/out
+log_success "Build directory structure created"
+
+# Copy FlyByWire sources
+log_section "Copying FlyByWire A32NX sources"
+
+log_info "Copying main components..."
+cp -ra ./flybywire/fbw-a32nx/src/behavior/. ./build-a320ceo/src/behavior
+cp -ra ./flybywire/fbw-a32nx/src/fonts/. ./build-a320ceo/src/fonts
+cp -ra ./flybywire/fbw-a32nx/src/localization/. ./build-a320ceo/src/localization
+cp -ra ./flybywire/fbw-a32nx/src/systems/. ./build-a320ceo/src/systems
+cp -ra ./flybywire/fbw-a32nx/src/wasm/. ./build-a320ceo/src/wasm
+
+log_info "Copying and renaming EWD components..."
+cp -ra ./flybywire/fbw-a32nx/src/systems/instruments/src/EWD/. ./build-a320ceo/src/systems/instruments/src/EWDcfm
+cp -ra ./flybywire/fbw-a32nx/src/systems/instruments/src/EWD/. ./build-a320ceo/src/systems/instruments/src/EWDiae
+
+log_info "Copying and renaming FMGC components..."
+cp -ra ./flybywire/fbw-a32nx/src/systems/fmgc/. ./build-a320ceo/src/systems/fmgcCFMSL
+cp -ra ./flybywire/fbw-a32nx/src/systems/fmgc/. ./build-a320ceo/src/systems/fmgcIAE
+cp -ra ./flybywire/fbw-a32nx/src/systems/fmgc/. ./build-a320ceo/src/systems/fmgcIAESL
+log_success "FlyByWire components copied"
+
+# Copy HorizSim sources
+log_section "Copying HorizSim A320CEO sources"
+
+log_info "Copying configuration files..."
+cp -ra ./hsim-a320ceo/.env ./build-a320ceo/.env
+cp -ra ./hsim-a320ceo/mach.config.js ./build-a320ceo/mach.config.js
+
+log_info "Copying main components..."
+cp -ra ./hsim-a320ceo/src/behavior/. ./build-a320ceo/src/behavior
+cp -ra ./hsim-a320ceo/src/localization/. ./build-a320ceo/src/localization
+cp -ra ./hsim-a320ceo/src/model/. ./build-a320ceo/src/model
+cp -ra ./hsim-a320ceo/src/systems/. ./build-a320ceo/src/systems
+cp -ra ./hsim-a320ceo/src/wasm/. ./build-a320ceo/src/wasm
+log_success "HorizSim components copied"
+
+# Create output directory structure
+log_section "Creating output directory structure"
+
+log_info "Creating main output directories..."
+mkdir -p ./build-a320ceo/out/lvfr-horizonsim-airbus-a320-ceo
+mkdir -p ./build-a320ceo/out/lvfr-horizonsim-airbus-a320-ceo-lock-highlight
+
+log_info "Creating UI structure directories..."
+mkdir -p ./build-a320ceo/out/lvfr-horizonsim-airbus-a320-ceo/html_ui/CSS
+mkdir -p ./build-a320ceo/out/lvfr-horizonsim-airbus-a320-ceo/html_ui/Fonts
+mkdir -p ./build-a320ceo/out/lvfr-horizonsim-airbus-a320-ceo/html_ui/Images
+mkdir -p ./build-a320ceo/out/lvfr-horizonsim-airbus-a320-ceo/html_ui/JS
+mkdir -p ./build-a320ceo/out/lvfr-horizonsim-airbus-a320-ceo/html_ui/Pages/VCockpit/Instruments/Airliners
+mkdir -p ./build-a320ceo/out/lvfr-horizonsim-airbus-a320-ceo/html_ui/Pages/VCockpit/Instruments/FlightElements
+mkdir -p ./build-a320ceo/out/lvfr-horizonsim-airbus-a320-ceo/html_ui/Pages/VCockpit/Instruments/NavSystems
+mkdir -p ./build-a320ceo/out/lvfr-horizonsim-airbus-a320-ceo/html_ui/Pages/VLivery/Liveries/A320HS_Printer
+mkdir -p ./build-a320ceo/out/lvfr-horizonsim-airbus-a320-ceo/html_ui/Pages/VLivery/Liveries/A320HS_Registration
+log_success "Output directory structure created"
+
+# Copy UI components
+log_section "Copying UI components"
+
+log_info "Copying and renaming FlyByWire UI components..."
+# Commented out in original script
+#cp -ra ./flybywire/fbw-a32nx/src/base/flybywire-aircraft-a320-neo/html_ui/CSS/. ./build-a320ceo/out/lvfr-horizonsim-airbus-a320-ceo/html_ui/CSS/A320HS
+cp -ra ./flybywire/fbw-a32nx/src/base/flybywire-aircraft-a320-neo/html_ui/Fonts/fbw-a32nx/. ./build-a320ceo/out/lvfr-horizonsim-airbus-a320-ceo/html_ui/Fonts/A320HS
+cp -ra ./flybywire/fbw-a32nx/src/base/flybywire-aircraft-a320-neo/html_ui/Images/fbw-a32nx/. ./build-a320ceo/out/lvfr-horizonsim-airbus-a320-ceo/html_ui/Images/A320HS
+cp -ra ./flybywire/fbw-a32nx/src/base/flybywire-aircraft-a320-neo/html_ui/JS/fbw-a32nx/. ./build-a320ceo/out/lvfr-horizonsim-airbus-a320-ceo/html_ui/JS/A320HS
+cp -ra ./flybywire/fbw-a32nx/src/systems/instruments/src/MCDU/legacy/A32NX_Core/. ./build-a320ceo/out/lvfr-horizonsim-airbus-a320-ceo/html_ui/Pages/A320HS_Core
+cp -ra ./flybywire/fbw-a32nx/src/base/flybywire-aircraft-a320-neo/html_ui/Pages/A32NX_Utils/. ./build-a320ceo/out/lvfr-horizonsim-airbus-a320-ceo/html_ui/Pages/A320HS_Utils
+cp -ra ./flybywire/fbw-a32nx/src/base/flybywire-aircraft-a320-neo/html_ui/Pages/VCockpit/Instruments/FlightElements/. ./build-a320ceo/out/lvfr-horizonsim-airbus-a320-ceo/html_ui/Pages/VCockpit/Instruments/FlightElements/A320HS
+cp -ra ./flybywire/fbw-a32nx/src/base/flybywire-aircraft-a320-neo/html_ui/Pages/VCockpit/Instruments/NavSystems/A320_Neo/. ./build-a320ceo/out/lvfr-horizonsim-airbus-a320-ceo/html_ui/Pages/VCockpit/Instruments/NavSystems/A320_Ceo
+cp -ra ./flybywire/fbw-a32nx/src/base/flybywire-aircraft-a320-neo/html_ui/Pages/VLivery/Liveries/A32NX_Registration/. ./build-a320ceo/out/lvfr-horizonsim-airbus-a320-ceo/html_ui/Pages/VLivery/Liveries/A320HS_Registration
+cp -ra ./flybywire/fbw-a32nx/src/base/flybywire-aircraft-a320-neo/html_ui/Pages/VLivery/Liveries/A32NX_Printer/. ./build-a320ceo/out/lvfr-horizonsim-airbus-a320-ceo/html_ui/Pages/VLivery/Liveries/A320HS_Printer
+log_success "UI components copied and renamed"
+
+# Copy base files
+log_section "Copying base files"
+
+log_info "Copying HorizSim base files to output..."
+cp -ra ./hsim-a320ceo/src/base/lvfr-horizonsim-airbus-a320-ceo/. ./build-a320ceo/out/lvfr-horizonsim-airbus-a320-ceo
+cp -ra ./hsim-a320ceo/src/base/lvfr-horizonsim-airbus-a320-ceo-lock-highlight/. ./build-a320ceo/out/lvfr-horizonsim-airbus-a320-ceo-lock-highlight
+log_success "Base files copied"
+
+# Cleanup and permissions
+log_section "Finalizing build"
+
+log_info "Removing unnecessary directories..."
+rm -rf ./build-a320ceo/src/systems/instruments/src/EWD
+
+log_info "Setting executable permissions..."
+chmod +x ./build-a320ceo/src/wasm/fbw_a320/build.sh
+chmod +x ./build-a320ceo/src/wasm/fadec_a320/build.sh
+log_success "Permissions set"
+
+# Check if everything exists as expected
+log_section "Verifying build output"
+
+# Function to verify directories exist
+verify_dir() {
+    if [ ! -d "$1" ]; then
+        log_error "Directory $1 was not created properly!"
+        return 1
+    else
+        log_info "Directory $1 exists ✓"
+        return 0
+    fi
+}
+
+# Function to check if file exists
+verify_file() {
+    if [ ! -f "$1" ]; then
+        log_error "File $1 was not copied properly!"
+        return 1
+    else
+        log_info "File $1 exists ✓"
+        return 0
+    fi
+}
+
+# Verify critical directories
+verify_dir "./build-a320ceo/out/lvfr-horizonsim-airbus-a320-ceo"
+verify_dir "./build-a320ceo/out/lvfr-horizonsim-airbus-a320-ceo-lock-highlight"
+verify_dir "./build-a320ceo/src/systems/instruments/src/EWDcfm"
+verify_dir "./build-a320ceo/src/systems/fmgcCFMSL"
+
+# Verify critical executable files
+verify_file "./build-a320ceo/src/wasm/fbw_a320/build.sh"
+verify_file "./build-a320ceo/src/wasm/fadec_a320/build.sh"
+
+# Check if executables have correct permissions
+if [ ! -x "./build-a320ceo/src/wasm/fbw_a320/build.sh" ]; then
+    log_error "build.sh does not have executable permissions!"
+    chmod +x "./build-a320ceo/src/wasm/fbw_a320/build.sh"
+    log_warning "Fixed permissions for fbw_a320/build.sh"
+fi
+
+if [ ! -x "./build-a320ceo/src/wasm/fadec_a320/build.sh" ]; then
+    log_error "build.sh does not have executable permissions!"
+    chmod +x "./build-a320ceo/src/wasm/fadec_a320/build.sh"
+    log_warning "Fixed permissions for fadec_a320/build.sh"
+fi
+
+log_section "Build completed successfully"
+echo -e "${GREEN}${BOLD}✓ All operations completed successfully${RESET}"
+echo -e "${CYAN}Build output available at:${RESET} ./build-a320ceo/out"

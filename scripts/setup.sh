@@ -8,17 +8,60 @@ touch "$LOG_FILE"
 
 # Function to log messages
 log_message() {
-  local level=$1
-  local message=$2
+  local level="$1"
+  local message="$2"
+  local log_file="${3:-/var/log/application.log}"
   local timestamp=$(date "+%Y-%m-%d %H:%M:%S")
-  echo "[$timestamp] [$level] $message" | tee -a "$LOG_FILE"
+  local formatted_message="[$timestamp] [$level] $message"
+
+  # Print to stdout
+  echo "$formatted_message"
+
+  # Create log directory if it doesn't exist
+  local log_dir=$(dirname "$log_file")
+  if [ ! -d "$log_dir" ]; then
+    mkdir -p "$log_dir" 2>/dev/null || {
+      echo "ERROR: Failed to create log directory '$log_dir'" >&2
+      return 1
+    }
+  fi
+
+  # Append to log file
+  echo "$formatted_message" >> "$log_file" 2>/dev/null || {
+    echo "ERROR: Failed to write to log file '$log_file'" >&2
+    return 2
+  }
+
+  return 0
 }
 
 # Function for color output
 print_color() {
-  local color_code=$1
-  local message=$2
-  echo -e "\033[${color_code}m${message}\033[0m" | tee -a "$LOG_FILE"
+  local color_code="$1"
+  local message="$2"
+  local log_file="${3:-/var/log/application.log}"
+  local colored_message="\033[${color_code}m${message}\033[0m"
+
+  # Print colored message to stdout
+  echo -e "$colored_message"
+
+  # Create log directory if it doesn't exist
+  local log_dir=$(dirname "$log_file")
+  if [ ! -d "$log_dir" ]; then
+    mkdir -p "$log_dir" 2>/dev/null || {
+      echo "ERROR: Failed to create log directory '$log_dir'" >&2
+      return 1
+    }
+  fi
+
+  # Append plain (non-colored) message to log file
+  # Strip color codes for log file to avoid raw escape sequences in logs
+  echo "$message" >> "$log_file" 2>/dev/null || {
+    echo "ERROR: Failed to write to log file '$log_file'" >&2
+    return 2
+  }
+
+  return 0
 }
 
 # Color codes
@@ -71,76 +114,6 @@ for arg in "$@"; do
     log_message "INFO" "Removed node_modules directory"
   fi
 done
-
-# Function to attempt repository repair
-attempt_repo_repair() {
-  local repo_dir=$1
-  local branch=$2
-
-  print_color "$YELLOW" "⚠️ Attempting to repair repository at $repo_dir..."
-  log_message "WARN" "Attempting repository repair: $repo_dir"
-
-  # Save current directory
-  local current_dir=$(pwd)
-  cd "$repo_dir"
-
-  # Try a series of repair steps
-  print_color "$BLUE" "1. Fetching latest changes..."
-  git fetch origin --prune || log_message "WARN" "Fetch failed, continuing with repair"
-
-  print_color "$BLUE" "2. Checking out main branch..."
-  if [ -z "$branch" ]; then
-    # Try to determine the main branch
-    for potential_branch in master main develop dev; do
-      if git show-ref --verify --quiet "refs/remotes/origin/$potential_branch"; then
-        branch=$potential_branch
-        break
-      fi
-    done
-
-    if [ -z "$branch" ]; then
-      # If still no branch found, use the current default branch from remote
-      branch=$(git remote show origin | grep 'HEAD branch' | cut -d' ' -f5)
-    fi
-  fi
-
-  log_message "INFO" "Using branch: $branch for repair"
-
-  print_color "$BLUE" "3. Saving uncommitted changes (if any)..."
-  if ! git diff-index --quiet HEAD --; then
-    # There are uncommitted changes, stash them
-    git stash save "Automatic stash by setup script" || {
-      print_color "$YELLOW" "⚠️ Could not stash changes, attempting to continue anyway"
-      log_message "WARN" "Stash failed during repair"
-    }
-    log_message "INFO" "Uncommitted changes stashed"
-  fi
-
-  print_color "$BLUE" "4. Hard resetting to remote branch..."
-  if ! git checkout -f "$branch"; then
-    if ! git reset --hard "origin/$branch"; then
-      print_color "$YELLOW" "⚠️ Could not reset to branch $branch, trying HEAD"
-      git reset --hard HEAD || log_message "WARN" "Reset to HEAD failed"
-    fi
-  fi
-
-  print_color "$BLUE" "5. Cleaning repository..."
-  git clean -fd || log_message "WARN" "Clean failed during repair"
-
-  # Return to original directory
-  cd "$current_dir"
-  log_message "INFO" "Repository repair attempt completed for $repo_dir"
-
-  # Validate if repair was successful
-  if validate_repo "$repo_dir" quiet; then
-    print_color "$GREEN" "✅ Repository repair successful!"
-    return 0
-  else
-    print_color "$YELLOW" "⚠️ Repository may still have issues but continuing anyway"
-    log_message "WARN" "Repository repair partially successful for $repo_dir"
-    return 1
-  fi
-}
 
 # Function to validate git repository completeness
 validate_repo() {
@@ -205,33 +178,40 @@ validate_repo() {
     valid=false
   fi
 
-  # Check if repository HEAD matches remote
-  local remote_head=""
-  remote_head=$(git ls-remote origin HEAD 2>/dev/null | cut -f1)
-
-  if [ -z "$remote_head" ]; then
-    print_color "$YELLOW" "⚠️ WARNING: Could not fetch remote HEAD. Network issue?"
-    log_message "WARN" "Could not fetch remote HEAD for $repo_dir"
+# Check if repository branch HEAD matches remote branch HEAD
+  local current_branch=$(git symbolic-ref --short HEAD 2>/dev/null)
+  if [ -z "$current_branch" ]; then
+    print_color "$YELLOW" "⚠️ WARNING: Detached HEAD state detected."
+    log_message "WARN" "Detached HEAD state in $repo_dir"
     valid=false
-  elif [ "$head_commit" = "$remote_head" ]; then
-    if [ "$quiet" != "quiet" ]; then
-      print_color "$GREEN" "✅ SUCCESS: Repository HEAD matches remote HEAD."
-    fi
-    log_message "INFO" "Repository $repo_dir HEAD matches remote"
-    valid=true
   else
-    print_color "$YELLOW" "⚠️ WARNING: Repository HEAD ($head_commit) does not match remote HEAD ($remote_head)."
-    log_message "WARN" "Repository $repo_dir HEAD mismatch with remote"
-    print_color "$BLUE" "🔄 Automatically syncing with remote..."
+    local remote_branch_head=""
+    remote_branch_head=$(git ls-remote origin "$current_branch" 2>/dev/null | cut -f1)
 
-    if git fetch origin && git reset --hard "$remote_head"; then
-      print_color "$GREEN" "✅ Successfully synced with remote"
-      log_message "INFO" "Successfully synced $repo_dir with remote"
+    if [ -z "$remote_branch_head" ]; then
+      print_color "$YELLOW" "⚠️ WARNING: Could not fetch remote branch '$current_branch'. Branch may not exist remotely or network issue."
+      log_message "WARN" "Could not fetch remote branch '$current_branch' for $repo_dir"
+      valid=false
+    elif [ "$head_commit" = "$remote_branch_head" ]; then
+      if [ "$quiet" != "quiet" ]; then
+        print_color "$GREEN" "✅ SUCCESS: Branch '$current_branch' matches remote."
+      fi
+      log_message "INFO" "Repository $repo_dir branch '$current_branch' matches remote"
       valid=true
     else
-      print_color "$YELLOW" "⚠️ Could not sync with remote, continuing anyway"
-      log_message "WARN" "Failed to sync $repo_dir with remote"
-      valid=false
+      print_color "$YELLOW" "⚠️ WARNING: Branch '$current_branch' ($head_commit) does not match remote ($remote_branch_head)."
+      log_message "WARN" "Repository $repo_dir branch '$current_branch' mismatch with remote"
+      print_color "$BLUE" "🔄 Automatically syncing with remote branch '$current_branch'..."
+
+      if git fetch origin "$current_branch" && git reset --hard "origin/$current_branch"; then
+        print_color "$GREEN" "✅ Successfully synced branch '$current_branch' with remote"
+        log_message "INFO" "Successfully synced $repo_dir branch '$current_branch' with remote"
+        valid=true
+      else
+        print_color "$YELLOW" "⚠️ Could not sync branch '$current_branch' with remote, continuing anyway"
+        log_message "WARN" "Failed to sync $repo_dir branch '$current_branch' with remote"
+        valid=false
+      fi
     fi
   fi
 
@@ -266,9 +246,9 @@ clone_with_fallback() {
     print_color "$GREEN" "✅ Standard clone successful!"
     log_message "INFO" "Standard clone successful for $target_dir"
     validate_repo "$target_dir" || {
-      print_color "$YELLOW" "⚠️ Validation issues after clone, attempting repair..."
+      print_color "$YELLOW" "⚠️ Validation issues after clone, will now exit..."
       log_message "WARN" "Validation issues after clone"
-      attempt_repo_repair "$target_dir"
+      return 2
     }
     return 0
   fi
@@ -279,9 +259,8 @@ clone_with_fallback() {
     print_color "$GREEN" "✅ Single branch clone successful!"
     log_message "INFO" "Single branch clone successful for $target_dir"
     validate_repo "$target_dir" || {
-      print_color "$YELLOW" "⚠️ Validation issues after single-branch clone, attempting repair..."
-      log_message "WARN" "Validation issues after single-branch clone"
-      attempt_repo_repair "$target_dir"
+      print_color "$YELLOW" "⚠️ Validation issues after single-branch clone, will now exit..."
+      return 2
     }
     return 0
   fi
@@ -331,9 +310,8 @@ clone_with_fallback() {
       log_message "INFO" "Checkout successful for $target_dir"
       cd ..
       validate_repo "$target_dir" || {
-        print_color "$YELLOW" "⚠️ Validation issues after bare clone, attempting repair..."
-        log_message "WARN" "Validation issues after bare clone"
-        attempt_repo_repair "$target_dir" "$default_branch"
+        print_color "$YELLOW" "⚠️ Validation issues after bare clone, will now exit..."
+        return 2
       }
       return 0
     else
@@ -368,7 +346,6 @@ else
   print_color "$BLUE" "Checking if modules directory exists..."
   if [ ! -d ".git/modules/flybywire" ]; then
     print_color "$YELLOW" "⚠️ Missing submodule directory. Attempting manual clone..."
-    log_message "WARN" "Missing submodule directory for flybywire"
 
     # Try to get the URL and branch from .gitmodules
     local flybywire_url=$(git config -f .gitmodules --get submodule.flybywire.url 2>/dev/null || echo "")
@@ -404,14 +381,10 @@ else
       print_color "$BLUE" "Checking out specified branch: $flybywire_branch"
       log_message "INFO" "Checking out specified branch: $flybywire_branch for flybywire"
       (cd flybywire && git checkout "$flybywire_branch") || {
-        print_color "$YELLOW" "⚠️ Could not checkout branch $flybywire_branch, will use default branch"
+        print_color "$YELLOW" "⚠️ Could not checkout branch $flybywire_branch"
         log_message "WARN" "Could not checkout branch $flybywire_branch for flybywire"
       }
     fi
-  else
-    print_color "$BLUE" "Submodule directory exists, trying to repair..."
-    log_message "INFO" "Submodule directory exists, trying to repair"
-    attempt_repo_repair "flybywire"
   fi
 fi
 
@@ -419,7 +392,6 @@ if ! validate_repo "flybywire" quiet; then
   print_color "$YELLOW" "⚠️ WARNING: flybywire repository validation issues detected."
   print_color "$BLUE" "🔄 Attempting to fix flybywire repository..."
   log_message "WARN" "Flybywire repository validation issues detected, attempting fix"
-  attempt_repo_repair "flybywire"
 else
   print_color "$GREEN" "✅ Flybywire repository validated successfully!"
   log_message "INFO" "Flybywire repository validated successfully"
@@ -471,17 +443,8 @@ else
   log_message "INFO" "large-files directory already exists and has content"
   if ! validate_repo "large-files" quiet; then
     print_color "$YELLOW" "⚠️ ISSUE DETECTED: large-files repository appears to be incomplete!"
-    print_color "$BLUE" "🔄 Attempting to repair..."
-    log_message "WARN" "large-files repository appears to be incomplete, attempting repair"
-
-    if attempt_repo_repair "large-files"; then
-      print_color "$GREEN" "✅ Successfully repaired large-files repository!"
-      log_message "INFO" "Successfully repaired large-files repository"
-    else
-      print_color "$YELLOW" "⚠️ FAILED TO FULLY REPAIR: large-files repository may still have issues."
-      print_color "$YELLOW" "Continuing anyway as this may not affect the build."
-      log_message "WARN" "Failed to fully repair large-files repository"
-    fi
+    log_message "WARN" "large-files repository appears to be incomplete, will now exit"
+    exit 2
   else
     print_color "$GREEN" "✅ large-files repository validated successfully!"
     log_message "INFO" "large-files repository validated successfully"
