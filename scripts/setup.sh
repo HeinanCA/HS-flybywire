@@ -297,10 +297,34 @@ clone_with_fallback() {
     git remote add origin "../${target_dir}.git"
     git fetch origin
 
-    # Try to determine the main branch
-    local default_branch=$(git remote show origin | grep "HEAD branch" | cut -d ":" -f 2 | tr -d ' ')
-    print_color "$BLUE" "Checking out default branch: $default_branch"
-    log_message "INFO" "Checking out default branch: $default_branch for $target_dir"
+    # Try to determine the correct branch from .gitmodules
+    local default_branch=""
+
+    # Check if there's a branch specified in .gitmodules
+    if [ -f "../.gitmodules" ]; then
+      # Get the submodule name
+      submodule_name=$(basename "$target_dir")
+      log_message "INFO" "Checking .gitmodules for branch of submodule: $submodule_name"
+
+      # Try to extract the branch from .gitmodules
+      submodule_branch=$(grep -A3 "submodule \"$submodule_name\"" "../.gitmodules" | grep "branch" | cut -d"=" -f2 | tr -d ' ')
+
+      if [ -n "$submodule_branch" ]; then
+        default_branch=$submodule_branch
+        print_color "$BLUE" "Found branch in .gitmodules: $default_branch"
+        log_message "INFO" "Found branch in .gitmodules: $default_branch"
+      fi
+    fi
+
+    # If no branch was found in .gitmodules, use the remote HEAD branch
+    if [ -z "$default_branch" ]; then
+      default_branch=$(git remote show origin | grep "HEAD branch" | cut -d ":" -f 2 | tr -d ' ')
+      print_color "$BLUE" "Using remote default branch: $default_branch"
+      log_message "INFO" "Using remote default branch: $default_branch for $target_dir"
+    fi
+
+    print_color "$BLUE" "Checking out branch: $default_branch"
+    log_message "INFO" "Checking out branch: $default_branch for $target_dir"
 
     if git checkout -f "$default_branch"; then
       print_color "$GREEN" "✅ Checkout successful!"
@@ -346,13 +370,22 @@ else
     print_color "$YELLOW" "⚠️ Missing submodule directory. Attempting manual clone..."
     log_message "WARN" "Missing submodule directory for flybywire"
 
-    # Try to get the URL from .gitmodules
+    # Try to get the URL and branch from .gitmodules
     local flybywire_url=$(git config -f .gitmodules --get submodule.flybywire.url 2>/dev/null || echo "")
+    local flybywire_branch=$(git config -f .gitmodules --get submodule.flybywire.branch 2>/dev/null || echo "")
 
     if [ -z "$flybywire_url" ]; then
       print_color "$YELLOW" "⚠️ Could not find flybywire URL in .gitmodules, using default"
       log_message "WARN" "Could not find flybywire URL in .gitmodules"
       flybywire_url="https://github.com/flybywiresim/a32nx.git" # Default fallback URL
+    fi
+
+    if [ -n "$flybywire_branch" ]; then
+      print_color "$BLUE" "Found branch for flybywire in .gitmodules: $flybywire_branch"
+      log_message "INFO" "Found branch for flybywire in .gitmodules: $flybywire_branch"
+    else
+      print_color "$YELLOW" "⚠️ No branch specified for flybywire in .gitmodules"
+      log_message "WARN" "No branch specified for flybywire in .gitmodules"
     fi
 
     print_color "$BLUE" "Attempting to clone flybywire from $flybywire_url"
@@ -365,6 +398,16 @@ else
     fi
 
     clone_with_fallback "$flybywire_url" "flybywire"
+
+    # If clone successful and we have a branch specified, make sure to check it out
+    if [ -d "flybywire" ] && [ -n "$flybywire_branch" ]; then
+      print_color "$BLUE" "Checking out specified branch: $flybywire_branch"
+      log_message "INFO" "Checking out specified branch: $flybywire_branch for flybywire"
+      (cd flybywire && git checkout "$flybywire_branch") || {
+        print_color "$YELLOW" "⚠️ Could not checkout branch $flybywire_branch, will use default branch"
+        log_message "WARN" "Could not checkout branch $flybywire_branch for flybywire"
+      }
+    fi
   else
     print_color "$BLUE" "Submodule directory exists, trying to repair..."
     log_message "INFO" "Submodule directory exists, trying to repair"
@@ -389,9 +432,27 @@ cd flybywire
 
 if [ ! -d "large-files" ] || [ -z "$(ls -A large-files 2>/dev/null)" ]; then
   LARGE_FILES_URL=$(git config -f .gitmodules --get submodule.large-files.url 2>/dev/null || echo "https://github.com/flybywiresim/aircraft-large-files")
+  LARGE_FILES_BRANCH=$(git config -f .gitmodules --get submodule.large-files.branch 2>/dev/null || echo "")
+
   print_color "$BLUE" "Cloning large-files from $LARGE_FILES_URL"
   log_message "INFO" "Cloning large-files from $LARGE_FILES_URL"
+
+  if [ -n "$LARGE_FILES_BRANCH" ]; then
+    print_color "$BLUE" "Will use branch: $LARGE_FILES_BRANCH (from .gitmodules)"
+    log_message "INFO" "Will use branch: $LARGE_FILES_BRANCH for large-files"
+  fi
+
   clone_with_fallback "$LARGE_FILES_URL" "large-files"
+
+  # If clone successful and we have a branch specified, make sure to check it out
+  if [ -d "large-files" ] && [ -n "$LARGE_FILES_BRANCH" ]; then
+    print_color "$BLUE" "Checking out specified branch: $LARGE_FILES_BRANCH"
+    log_message "INFO" "Checking out specified branch: $LARGE_FILES_BRANCH for large-files"
+    (cd large-files && git checkout "$LARGE_FILES_BRANCH") || {
+      print_color "$YELLOW" "⚠️ Could not checkout branch $LARGE_FILES_BRANCH, will use default branch"
+      log_message "WARN" "Could not checkout branch $LARGE_FILES_BRANCH for large-files"
+    }
+  fi
 
   # If we have a successful clone, register it as a submodule
   if [ -d "large-files" ] && [ -n "$(ls -A large-files 2>/dev/null)" ]; then
