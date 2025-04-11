@@ -1,5 +1,5 @@
 [submodule "flybywire"]
 	path = flybywire
 	url = https://github.com/flybywiresim/aircraft.git
-	branch = v0.13.0-rc3
+	branch = v0.13
 	shallow = true
